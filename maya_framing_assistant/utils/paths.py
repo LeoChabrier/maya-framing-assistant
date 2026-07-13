@@ -48,6 +48,27 @@ class Paths:
         return os.path.join(cls.root(), "gui")
 
     @classmethod
+    def config(cls):
+        """Get the config directory path.
+
+        Returns:
+            str: Config directory path.
+        """
+        return os.path.join(cls.root(), "config")
+
+    @classmethod
+    def config_file(cls, name):
+        """Get path to a config file.
+
+        Args:
+            name: Config filename (e.g. 'render_formats.json').
+
+        Returns:
+            str: Full path to the config file.
+        """
+        return os.path.join(cls.config(), name)
+
+    @classmethod
     def ui_file(cls, name="mainWindow.ui"):
         """Get path to a UI file.
 

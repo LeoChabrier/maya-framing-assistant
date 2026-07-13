@@ -1,0 +1,25 @@
+{
+    "formats": [
+        {
+            "name": "HD",
+            "label": "HD 1.77 (1920x1080)",
+            "width": 1920,
+            "height": 1080,
+            "aspect_ratio": 1.778
+        },
+        {
+            "name": "Flat",
+            "label": "FLAT 1.85 (1998x1080)",
+            "width": 1998,
+            "height": 1080,
+            "aspect_ratio": 1.850
+        },
+        {
+            "name": "Scope",
+            "label": "SCOPE 2.39 (2048x858)",
+            "width": 2048,
+            "height": 858,
+            "aspect_ratio": 2.387
+        }
+    ]
+}

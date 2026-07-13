@@ -6,3 +6,4 @@ from .qt_compat import (
     LeftButton, RightButton, MiddleButton, get_event_pos, IS_PYSIDE6
 )
 from .paths import Paths
+from .config import Config

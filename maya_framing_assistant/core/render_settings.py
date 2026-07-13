@@ -1,31 +1,10 @@
-"""Render settings service for Maya."""
+"""Render settings service for Maya.
+
+Render format presets are data-driven (see ``config/render_formats.json``,
+loaded via ``utils.Config``); this module only applies/detects them.
+"""
 
 from maya import cmds
-
-
-class RenderFormat:
-    """Standard render format presets."""
-
-    HD = {
-        'name': 'HD',
-        'width': 1920,
-        'height': 1080,
-        'aspect_ratio': 1.778
-    }
-
-    FLAT = {
-        'name': 'Flat',
-        'width': 1998,
-        'height': 1080,
-        'aspect_ratio': 1.850
-    }
-
-    SCOPE = {
-        'name': 'Scope',
-        'width': 2048,
-        'height': 858,
-        'aspect_ratio': 2.387
-    }
 
 
 class RenderSettings:
@@ -72,7 +51,7 @@ class RenderSettings:
         """Apply a render format preset.
 
         Args:
-            render_format: A RenderFormat preset dictionary.
+            render_format: A render format dict (width, height, aspect_ratio).
         """
         RenderSettings.set_resolution(
             render_format['width'],
@@ -81,20 +60,20 @@ class RenderSettings:
         )
 
     @staticmethod
-    def detect_current_format():
-        """Detect which standard format matches current settings.
+    def detect_current_format(formats):
+        """Detect which configured format matches current settings.
+
+        Args:
+            formats: List of render format dicts (name, width, height, ...).
 
         Returns:
-            str or None: Format name ('HD', 'Flat', 'Scope') or None if custom.
+            str or None: Matching format name, or None if none matches.
         """
         width, height = RenderSettings.get_resolution()
 
-        if width == 1920 and height == 1080:
-            return 'HD'
-        elif width == 1998 and height == 1080:
-            return 'Flat'
-        elif width == 2048 and height == 858:
-            return 'Scope'
+        for fmt in formats:
+            if fmt.get('width') == width and fmt.get('height') == height:
+                return fmt.get('name')
 
         return None
 

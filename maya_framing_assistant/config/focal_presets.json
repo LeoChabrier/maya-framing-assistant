@@ -1,0 +1,16 @@
+{
+    "categories": [
+        {
+            "name": "Wide Angle",
+            "focals": [12, 24]
+        },
+        {
+            "name": "Standard",
+            "focals": [35, 50]
+        },
+        {
+            "name": "Telephoto",
+            "focals": [85, 100, 135, 150, 175, 200]
+        }
+    ]
+}

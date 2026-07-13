@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(foreach \\($p in @\\(\"python\",\"py\"\\)\\) { try { $v = & $p -c \"import sys,PySide6;print\\(sys.executable, PySide6.__version__\\)\" 2>$null; if \\($v\\) { \"$p -> $v\" } } catch {} ; try { $v2 = & $p -c \"import sys,PySide2;print\\(sys.executable,'PySide2',PySide2.__version__\\)\" 2>$null; if \\($v2\\) { \"$p -> $v2\" } } catch {} })",
+      "PowerShell($env:QT_QPA_PLATFORM=\"offscreen\"; & \"C:\\\\Program Files\\\\Python311\\\\python.exe\" \"C:\\\\Users\\\\leo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-leo-Documents-maya-2025-prefs-scripts-maya-framing-assistant\\\\691a49c8-0e55-4640-9528-d24b931dd8b8\\\\scratchpad\\\\verify_ui.py\")",
+      "Bash(C:/Program Files/Python311/python.exe *)",
+      "Bash(\"C:/Program Files/Python311/python.exe\" -c \"import sys; sys.path.insert\\(0,'.'\\); from utils import Config, Paths; Paths.set_root\\('.'\\); print\\('formats file:', Paths.config_file\\('render_formats.json'\\)\\); print\\('formats:', [f['name'] for f in Config.render_formats\\(\\)]\\); print\\('categories:', [\\(c['name'], c['focals']\\) for c in Config.focal_categories\\(\\)]\\)\")"
+    ]
+  }
+}

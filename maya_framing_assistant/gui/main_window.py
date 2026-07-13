@@ -11,11 +11,10 @@ from utils import (
     QtWidgets, QtCore, QtGui, QUiLoader,
     MouseButtonPress, MouseMove, Wheel, LeftButton, get_event_pos
 )
-from utils import Paths
+from utils import Paths, Config
 
 if MAYA_AVAILABLE:
     from core import CameraService, ImagePlaneService, RenderSettings
-    from core.render_settings import RenderFormat
     from core.image_plane_service import clip
 
 
@@ -43,6 +42,10 @@ class MainWindow(_MainWindowBase):
 
         # Connect signals
         self._connect_signals()
+
+        # Build data-driven UI (render formats + focal presets from config/)
+        self._build_render_formats()
+        self._build_focal_presets()
 
         # Setup event filters
         self.ui.listCam.installEventFilter(self)
@@ -116,11 +119,6 @@ class MainWindow(_MainWindowBase):
         self.ui.dollyZoomCheckBox.clicked.connect(self._on_dolly_zoom_toggle)
         self.ui.showManip.clicked.connect(self._on_show_manip)
 
-        # Focal Presets
-        for btn_name in ['12', '24', '35', '50', '85', '100', '135', '150', '175', '200']:
-            btn = getattr(self.ui, f'pushButton{btn_name}')
-            btn.clicked.connect(self._on_focal_preset)
-
         # Pan/Zoom
         self.ui.panZoom.clicked.connect(self._on_pan_zoom_toggle)
         self.ui.initPushButton.clicked.connect(self._on_reset_pan_zoom)
@@ -129,19 +127,62 @@ class MainWindow(_MainWindowBase):
         self.ui.rollSlider.valueChanged.connect(self._on_roll_changed)
         self.ui.tumbleTool.clicked.connect(self._on_tumble_toggle)
 
-        # Render Settings
-        self.ui.hdFormat.clicked.connect(self._on_render_format)
-        self.ui.scopeFormat.clicked.connect(self._on_render_format)
-        self.ui.flatFormat.clicked.connect(self._on_render_format)
+        # Render format radios and focal presets are built + connected
+        # dynamically from config; see _build_render_formats / _build_focal_presets.
+
+    def _build_render_formats(self):
+        """Create render format radio buttons from config/render_formats.json."""
+        self._render_formats = Config.render_formats()
+        self._format_by_name = {}
+        self._format_buttons = {}
+
+        layout = self.ui.renderGroup.layout()
+        for fmt in self._render_formats:
+            name = fmt.get('name', '')
+            button = QtWidgets.QRadioButton(fmt.get('label', name))
+            button.setAutoExclusive(True)
+            button.setProperty('format_name', name)
+            button.clicked.connect(self._on_render_format)
+            layout.addWidget(button)
+            self._format_by_name[name] = fmt
+            self._format_buttons[name] = button
+
+    def _build_focal_presets(self):
+        """Create focal preset buttons from config/focal_presets.json.
+
+        Buttons are grouped under a header per category (Wide Angle, Standard,
+        Telephoto, ...); each row of buttons stretches to fill the width.
+        """
+        preset_font = QtGui.QFont()
+        preset_font.setPointSize(7)
+        preset_font.setBold(True)
+
+        layout = self.ui.focalPresetsHost.layout()
+        for category in Config.focal_categories():
+            header = QtWidgets.QLabel(category.get('name', ''))
+            header.setStyleSheet('font-weight: bold; color: rgb(150, 150, 150);')
+            layout.addWidget(header)
+
+            row = QtWidgets.QHBoxLayout()
+            row.setSpacing(4)
+            for focal in category.get('focals', []):
+                button = QtWidgets.QPushButton(str(focal))
+                button.setFont(preset_font)
+                button.setMinimumSize(39, 19)
+                button.setStyleSheet('background-color: rgb(55, 55, 55);')
+                button.clicked.connect(self._on_focal_preset)
+                row.addWidget(button, 1)
+            layout.addLayout(row)
+
+        layout.addStretch(1)
 
     def _init_render_format_buttons(self):
-        """Set render format buttons based on current settings."""
+        """Check the render format radio matching current Maya settings."""
         if not MAYA_AVAILABLE:
             return
-        current_format = RenderSettings.detect_current_format()
-        self.ui.hdFormat.setChecked(current_format == 'HD')
-        self.ui.flatFormat.setChecked(current_format == 'Flat')
-        self.ui.scopeFormat.setChecked(current_format == 'Scope')
+        current_format = RenderSettings.detect_current_format(self._render_formats)
+        for name, button in self._format_buttons.items():
+            button.setChecked(name == current_format)
 
     # ─── Event Handling ─────────────────────────────────────────────
 
@@ -584,9 +625,12 @@ class MainWindow(_MainWindowBase):
         camera_shape = self.current_camera_shape[0]
         zoom = CameraService.get_zoom(camera_shape)
 
-        # Panel size = 150x85px
-        h_pan = (((x - self.init_pan_zoom_x) / -150) * zoom * 0.2) + self.current_pan_zoom_x
-        v_pan = (((y - self.init_pan_zoom_y) / 85) * zoom * 0.2) + self.current_pan_zoom_y
+        # Map drag distance to pan using the live widget size so sensitivity
+        # stays consistent when the panel is resized.
+        area_w = max(self.ui.panZoomArea.width(), 1)
+        area_h = max(self.ui.panZoomArea.height(), 1)
+        h_pan = (((x - self.init_pan_zoom_x) / -area_w) * zoom * 0.2) + self.current_pan_zoom_x
+        v_pan = (((y - self.init_pan_zoom_y) / area_h) * zoom * 0.2) + self.current_pan_zoom_y
 
         CameraService.set_pan_values(
             camera_shape,
@@ -600,18 +644,12 @@ class MainWindow(_MainWindowBase):
         """Handle render format radio button change."""
         if not MAYA_AVAILABLE:
             return
-        if self.ui.hdFormat.isChecked():
-            RenderSettings.apply_format(RenderFormat.HD)
-            self.ui.flatFormat.setChecked(False)
-            self.ui.scopeFormat.setChecked(False)
-        elif self.ui.flatFormat.isChecked():
-            RenderSettings.apply_format(RenderFormat.FLAT)
-            self.ui.hdFormat.setChecked(False)
-            self.ui.scopeFormat.setChecked(False)
-        elif self.ui.scopeFormat.isChecked():
-            RenderSettings.apply_format(RenderFormat.SCOPE)
-            self.ui.hdFormat.setChecked(False)
-            self.ui.flatFormat.setChecked(False)
+        button = self.sender()
+        if not button or not button.isChecked():
+            return
+        fmt = self._format_by_name.get(button.property('format_name'))
+        if fmt:
+            RenderSettings.apply_format(fmt)
 
     # ─── Helpers ────────────────────────────────────────────────────
 
