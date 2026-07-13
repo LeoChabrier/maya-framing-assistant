@@ -650,6 +650,15 @@ class MainWindow(_MainWindowBase):
         fmt = self._format_by_name.get(button.property('format_name'))
         if fmt:
             RenderSettings.apply_format(fmt)
+            # Re-fit an existing image plane to the new format. Its sizeY was
+            # computed from the previous resolution, so without this it keeps
+            # the old framing until the plane is deleted and recreated.
+            # Use the gate button text, not isChecked(): creation fits to the
+            # resolution gate programmatically without toggling the button, so
+            # its checked state is unreliable. _on_gate_toggle keeps the text
+            # in sync with the current mode.
+            if self.ui.pb_create.text() == 'Delete':
+                self._on_gate_toggle(self.ui.gate.text() == 'Resolution')
 
     # ─── Helpers ────────────────────────────────────────────────────
 
